@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Set, Optional
 import numpy as np
 
+from ..exceptions import InvalidDimensionError
+
 
 class FormatHandler(ABC):
     """Abstract base class for all format handlers."""

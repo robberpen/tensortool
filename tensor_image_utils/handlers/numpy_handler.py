@@ -139,7 +139,7 @@ class NumpyHandler(FormatHandler):
             elif c == 4:
                 # RGBA - drop alpha channel
                 return data[:, :, :3]
-        elif data.shape[0] in [1, 3, 4] and h > data.shape[0] and w > data.shape[0]:
+        elif data.shape[0] in [1, 3, 4] and data.shape[1] > data.shape[0] and data.shape[2] > data.shape[0]:
             # Likely CHW format - transpose to HWC
             if data.shape[0] == 1:
                 # Single channel - convert to RGB

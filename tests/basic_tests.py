@@ -11,7 +11,7 @@ import tempfile
 from unittest.mock import patch
 
 # Add src to path for testing
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from tensor_image_utils import ImageTensorConverter
 from tensor_image_utils.exceptions import UnsupportedFormatError, InvalidDimensionError
