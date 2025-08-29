@@ -38,16 +38,18 @@ def dtype_from_str(name: str, little: bool) -> np.dtype:
 
 def validate_layout(arr: np.ndarray, layout: str):
     # Enforce C=3 for HWC/CHW transforms as requested
-    if arr.ndim != 3:
+    if layout == "NONE" or arr.ndim != 3:
         return
-    if layout == "CHW" and arr.shape[2] != 3:
-        raise ValueError("Expect HWC with C=3 before transposing to CHW.")
-    if layout == "HWC" and arr.shape[0] != 3:
-        raise ValueError("Expect CHW with C=3 before transposing to HWC.")
+    if layout == "CHW":
+        if arr.shape[2] != 3:
+            return
+    if layout == "HWC":
+        if arr.shape[0] != 3:
+            return
 
 def transpose_layout(arr: np.ndarray, layout: str) -> np.ndarray:
     # HWC <-> CHW transforms
-    if arr.ndim != 3:
+    if layout == "NONE" or arr.ndim != 3:
         return arr
     if layout == "CHW" and arr.shape[2] == 3:
         return np.transpose(arr, (2, 0, 1))  # HWC -> CHW
@@ -72,6 +74,9 @@ numpy_utils.py --load_raw ./face-640x640.raw --shape 3,640,640 --raw_dtype int8 
 
 # 4) Convert RAW HWC(640,640,3) -> CHW then int8 -> RAW big-endian
 numpy_utils.py --load_raw ./img.hwcrgb --shape 640,640,3 --raw_dtype uint8 --as CHW --type int8 --save ./img.chw.i8.be --raw
+
+# 5) Load RAW (1,84,8400) without layout checks
+numpy_utils.py --load_raw ./face-640x640.raw.out --shape 1,84,8400 --raw_dtype int32 --as NONE --type int32 --show 3
 """
 
 def build_parser() -> argparse.ArgumentParser:
@@ -102,8 +107,8 @@ def build_parser() -> argparse.ArgumentParser:
     out_group = parser.add_argument_group("Output options")
     out_group.add_argument("--save", type=str,
                            help="Output path. Default saves as pickle if provided")
-    out_group.add_argument("--as", dest="layout", choices=["HWC", "CHW"], default="HWC",
-                           help="Transpose layout between HWC <-> CHW (C=3). Default HWC")
+    out_group.add_argument("--as", dest="layout", choices=["NONE", "HWC", "CHW"], default="NONE",
+                           help="Transpose layout between HWC <-> CHW (C=3). Use NONE to skip (default)")
     out_group.add_argument("--type",
                            choices=["int8","int32","uint8","float32"],
                            default="int8",
@@ -144,7 +149,7 @@ def main():
     try:
         validate_layout(arr, args.layout)
         arr = transpose_layout(arr, args.layout)
-        if arr.ndim == 3:
+        if args.layout != "NONE" and arr.ndim == 3:
             print(f"Layout -> {args.layout}: shape={arr.shape}")
     except Exception as e:
         parser.error(str(e))
