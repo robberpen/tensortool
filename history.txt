@@ -1,0 +1,91 @@
+
+## Usecse conver rgb888 HWC to CHW f32 then inference
+
+1. RGB888 uint8
+ $ hexdump face-640x640.rgb888 -C -n 20
+00000000  d8 ce c5 d8 ce c5 d8 ce  c5 d8 ce c5 d8 ce c5 d8  |................|
+00000010  ce c5 d8 ce                                       |....|
+00000014
+
+2. alternative load and dump
+(neuro-py3.10) tensortool $ python ./utils/numpy_utils.py --load ./samples/face-640x640.npy --type uint8 --show 20
+Loaded NPY: path=./samples/face-640x640.npy, shape=(640, 640, 3), dtype=uint8
+Dtype -> uint8
+First 20 elements: [216 206 197 216 206 197 216 206 197 216 206 197 216 206 197 216 206 197
+ 216 206]
+
+
+3. Convert from HWC to CHW and uint8 to float32.
+> python ./utils/numpy_utils.py --load ./samples/face-640x640.npy --as CHW --type float32 --save ./abc.npy
+Loaded NPY: path=./samples/face-640x640.npy, shape=(640, 640, 3), dtype=uint8
+Layout -> CHW: shape=(3, 640, 640)
+Dtype -> >f4
+Saving pickle (.npy-like via pickle) -> ./abc.npy
+
+4. Convert to f32
+(neuro-py3.10) tensortool $ python ./utils/numpy_utils.py --load ./abc.npy --type float32 --show 20
+Loaded NPY: path=./abc.npy, shape=(3, 640, 640), dtype=float32
+Dtype -> >f4
+First 20 elements: [216. 216. 216. 216. 216. 216. 216. 216. 216. 216. 216. 216. 216. 216.
+ 216. 216. 216. 216. 216. 216.]
+
+5. Inference .tflite on X86 host with float32
+
+$ python ./tflite_runner --model utils/yolov8s.tflite --in_path ./abc.npy --auto_reshape --out_path ./yolov8s.tflite.f4.out
+2025-09-03 16:47:42.809705: I tensorflow/core/util/port.cc:110] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-09-03 16:47:42.826491: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+SUCCESS: Model loaded - utils/yolov8s.tflite
+DEBUG: Loaded ./abc.npy
+       Shape: (3, 640, 640)
+       DType: float32
+       Range: [0.0, 255.0]
+DEBUG: Input validation
+       Expected shape: (1, 3, 640, 640)
+       Expected dtype: <class 'numpy.float32'>
+       Actual shape: (3, 640, 640)
+       Actual dtype: float32
+WARNING: Attempting automatic reshape
+         From: (3, 640, 640) -> To: (1, 3, 640, 640)
+INFO: Detected CHW->NCHW conversion (adding batch dimension)
+SUCCESS: Auto-reshaped to (1, 3, 640, 640)
+DEBUG: Inference completed
+       Output shape: (1, 84, 8400)
+       Output dtype: float32
+       Output range: [-42.801590, 840.946899]
+SUCCESS: Output saved to ./yolov8s.tflite.f4.out
+         Shape: (1, 84, 8400)
+         DType: float32
+(neuro-py3.10) tensortool $
+
+
+## Try neuronrt quantize
+
+1. Covnert numpy HWC to CHW as raw u8
+ $ python ./utils/numpy_utils.py --load ./samples/face-640x640.npy --as CHW --type uint8 --save ./3x640x640.uint8.raw --raw
+Loaded NPY: path=./samples/face-640x640.npy, shape=(640, 640, 3), dtype=uint8
+Layout -> CHW: shape=(3, 640, 640)
+Dtype -> uint8
+Saving RAW (BE) -> ./3x640x640.uint8.raw
+
+2. Inference on target.
+$ ./utils/dla_tester ./yolov8s_quant.dla ./3x640x640.uint8.raw
+
+3. Convert raw as numpy. MAKE SURE IS UINT8 or INT8
+ $ ./utils/numpy_utils.py --load_raw 3x640x640.uint8.raw.out --shape 1,84,8400 --type int8 --show 30
+Loaded RAW: path=3x640x640.uint8.raw.out, shape=(1, 84, 8400), dtype=int8
+Dtype -> int8
+First 30 elements: [-123 -119 -115 -112 -110 -107 -104 -101  -99  -97  -95  -91  -87  -83
+  -79  -78  -75  -72  -70  -62  -58  -58  -54  -51  -41  -41  -41  -40
+  -40  -39]
+tensortool $ ./utils/numpy_utils.py --load_raw 3x640x640.uint8.raw.out --shape 1,84,8400 --type int8 --save 3x640x640.uint8.raw.out.np
+Loaded RAW: path=3x640x640.uint8.raw.out, shape=(1, 84, 8400), dtype=int8
+Dtype -> int8
+Saving pickle (.npy-like via pickle) -> 3x640x640.uint8.raw.out.np
+
+
+## demo invert RGB to .npy then .jpg
+
+$ utils/numpy_utils.py  --load_raw  3x640x640.uint8.raw  --shape 3,640,640 --raw_dtype uint8 --as HWC --type uint8 --save 3x640x640.uint8.raw.npy
+$ python ./demo.py --load 3x640x640.uint8.raw.npy --info --save 3x640x640.uint8.raw.np.jpg

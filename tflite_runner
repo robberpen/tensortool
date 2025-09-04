@@ -433,7 +433,7 @@ def load_numpy_file(file_path: str) -> np.ndarray:
             print(f"ERROR: Input file not found: {file_path}")
             sys.exit(1)
         
-        data = np.load(file_path)
+        data = np.load(file_path, allow_pickle=True)
         print(f"DEBUG: Loaded {file_path}")
         print(f"       Shape: {data.shape}")
         print(f"       DType: {data.dtype}")

@@ -44,7 +44,7 @@ class NumpyHandler(FormatHandler):
         
         try:
             # Load numpy array
-            data = np.load(filepath)
+            data = np.load(filepath, allow_pickle=True)
             
             # Convert to standard format
             processed_data = self._process_numpy_data(data)
