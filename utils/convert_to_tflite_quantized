@@ -11,4 +11,8 @@ converter = mtk_converter.PyTorchConverter.from_script_module_file(
 converter.quantize = True
 converter.input_value_ranges = [(-1.0, 1.0)]
 converter.calibration_data_gen = data_gen
-_ = converter.convert_to_tflite(output_file='yolov8s_quant.tflite')
+converter.decompose_silu_ops = True
+_ = converter.convert_to_tflite(
+    output_file='yolov8s_quant.tflite',
+    tflite_op_export_spec="legacy_ignore_version"
+    )

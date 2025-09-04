@@ -1,13 +1,24 @@
 import mtk_converter
 import numpy as np
 
-def data_gen():
-    for i in range(100):
-        yield [np.random.randn(1, 3, 640, 640).astype(np.float32)]
+#
+# In case without quantize, It need not calibration data.
+# The converted is identical
+# $ md5sum yolov8s.tflite yolov8s.tflite.orig
+#   f9c7182a6becaa392ddd808da3bff2b7  yolov8s.tflite
+#   f9c7182a6becaa392ddd808da3bff2b7  yolov8s.tflite.orig
 
+#def data_gen():
+#    for i in range(100):
+#        yield [np.random.randn(1, 3, 640, 640).astype(np.float32)]
+#
 converter = mtk_converter.PyTorchConverter.from_script_module_file(
     'yolov8s.torchscript',  [[1, 3, 640, 640]],
 )
-converter.input_value_ranges = [(-1.0, 1.0)]
-converter.calibration_data_gen = data_gen
-_ = converter.convert_to_tflite(output_file='yolov8s.tflite')
+#converter.input_value_ranges = [(-1.0, 1.0)]
+#converter.calibration_data_gen = data_gen
+converter.decompose_silu_ops = True
+_ = converter.convert_to_tflite(
+    output_file='yolov8s.tflite'
+    )
+#    tflite_op_export_spec="legacy_ignore_version"

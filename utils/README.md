@@ -1,3 +1,16 @@
+# model converter
+
+* convert_to_tflite - convert .torchscript to .tflite without quantize.
+
+Repeat run convert_to_tflite will get identical .tflite.
+But every ncc-tflite will lead to different .dla.
+
+> python ./convert_to_tflite
+> ncc-tflite --arch=mdla3.0 --relax-fp32  yolov8s.tflite -d yolov8s.dla
+
+* convert_to_tflite_quantized - convert .torchscript to .tflite with quantize.
+> python ./convert_to_tflite_quantized
+
 # Usage:
 ```
 > python ./numpy_utils.py --load ../samples/face-640x640.npy  --as CHW --type int32 --save ./img.chw.i32.le --raw --little
@@ -35,5 +48,4 @@ usage: numpy_utils.py [-h] (--load LOAD | --load_raw LOAD_RAW) [--shape SHAPE] [
                       [--show SHOW] [--save SAVE] [--as {NONE,HWC,CHW}] [--type {int8,int32,uint8,float32}] [--raw] [--little]
 ```
 
-
-
+> ./numpy_utils.py --load_raw  face_1x20x8400.bin --shape 1,20,8400 --raw_dtype float32 --type float32 --show 100 --little

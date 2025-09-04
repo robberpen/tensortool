@@ -1,0 +1,20 @@
+#!/bin/sh
+
+if [ "$1" = "" -o "$2" = "" ];then
+    echo "$0 <module.dla> <input>"
+    echo "eg:"
+    echo "$0 yolov8s_quant.dla face-640x640.rgb888"
+    echo "$0 yolov8s.dla face-640x640.raw"
+    exit 0
+fi
+
+dla=$1
+in=$2
+
+
+adb shell mkdir /demo -p
+adb push $dla /demo
+adb push $in /demo
+
+adb shell neuronrt -d -a /demo/$dla -i /demo/$in -o /demo/$in.out
+adb pull /demo/$in.out
